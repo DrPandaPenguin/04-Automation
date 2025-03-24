@@ -17,9 +17,11 @@ from dotenv import load_dotenv # load_dotenv as arry or dictionary?
 load_dotenv() # Load environment variables from .env file
 USERNAME = os.environ.get("AD_USERNAME")
 PASSWORD = os.environ.get("AD_PASSWORD")
+PARTIAL_TITLE = os.environ.get("AD_PARTIAL_TITLE")  # Example
+# --- End of Configuration ---
 
-if not USERNAME or not PASSWORD:# check if password and username are set
-    raise ValueError("AD_USERNAME and AD_PASSWORD environment variables must be set.")
+if not USERNAME or not PASSWORD or not PARTIAL_TITLE:# check if password and username are set
+    raise ValueError("AD_USERNAME and AD_PASSWORD and PARTIAL_TITLE environment variables must be set.")
 
 def get_most_recent_ad_link(driver, partial_title):
     """Finds and returns the URL of the most recent ad (first row in table) using XPath."""
@@ -72,7 +74,8 @@ def get_most_recent_ad_link(driver, partial_title):
         return None
     
 def click_reupload_button(driver):
-    """Clicks the '다시 올리기' (Re-upload) button, re-locating it immediately before clicking."""
+
+    """handel clikign the reupload button"""
     try:
         # Re-locate the button RIGHT BEFORE clicking
         
@@ -86,27 +89,36 @@ def click_reupload_button(driver):
         button.click()
         print("Clicked the 'Re-upload' button.")
 
-        print("Waiting for the alert...")
-        alert = webdriver(driver, 10).until(EC.alert_is_present())  # Wait for the alert
-        if alert:
-            alert = driver.switch_to.alert  # Switch to the alert
-            print(f"Alert text: {alert.text}")  # Good for debugging
-            alert.accept()  # Click "OK" 확인 버튼
-            print("Accepted the alert.")
-            return True
-        else:
-            print("No alert was present.")
-            return False
 
+        
     except TimeoutException:
-        print("Timed out waiting for the 'Re-upload' button.")
-        return False
+        print("Timed out waiting for the re-upload button.")
+        return "button_not_found"  # Specific return value for button not found
     except NoSuchElementException:
-        print("'Re-upload' button not found.")
-        return False
+        print("Re-upload button element could not be found (unexpected).")
+        return "button_not_found"
+    except Exception as e:
+        print(f"An unexpected error occurred while finding/clicking button: {e}")
+        return "unexpected_error"
+    
+
+    """Handle the alert that appears after clicking the button."""
+    try:    
+        print("Waiting for the alert...")
+        webdriver(driver, 10).until(EC.alert_is_present())  # Wait for the alert
+        alert = driver.switch_to.alert  # Switch to the alert
+        print(f"Alert text: {alert.text}")  
+        alert.accept()  # Click "OK" 확인 버튼
+        print("Accepted the alert.")
+        return "button_clicked"  # Return a success value
+    
+    except TimeoutException:
+        print("Timed out waiting for the alert.")
+        return "alert_not_found"
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        return False
+        return  "unexpected_error"
+
 
 def reupload_ad():
     """Logs in to 04uk.com and re-uploads the advertisement."""
@@ -117,6 +129,7 @@ def reupload_ad():
 
         driver.get("http://04uk.com/bbs/myarticles.php")  # go to my article page 
 
+        """Login to the website"""
         username_field = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.NAME, "mb_id"))
         )
@@ -127,9 +140,9 @@ def reupload_ad():
         username_field.send_keys(USERNAME)
         password_field.send_keys(PASSWORD)
         password_field.send_keys(Keys.RETURN)# press enter 
-        partial_title = "GCSE"  # Example
 
-        ad_url = get_most_recent_ad_link(driver, partial_title)  # Example
+        """Find the most recent ad and navigate to its page"""
+        ad_url = get_most_recent_ad_link(driver, PARTIAL_TITLE)  # Example
         if not ad_url:
             print("Ad not found or does not match the partial title.")
             return
@@ -139,10 +152,17 @@ def reupload_ad():
         WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.TAG_NAME, "body"))) #waites untlle pages if fully loaded
         print("Successfully navigated to the ad page.")
 
-        if not click_reupload_button(driver):
-            print("Re-upload button not found or failed.")
-            return
-        print("Re-upload process completed successfully.")
+        result = click_reupload_button(driver)
+        if result == "button_clicked":  
+            print("Re-upload process completed successfully!")
+        elif result == "button_not_found":
+            print("Re-upload button not found.")
+        elif result == "alert_not_found":
+            print("Re-upload button clicked, but no alert appeared.")
+        elif result == "unexpected_error":
+            print("An unexpected error occurred during re-upload.")
+        
+        return 
 
 
     except NoSuchElementException:
