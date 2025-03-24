@@ -17,17 +17,15 @@ from dotenv import load_dotenv # load_dotenv as arry or dictionary?
 load_dotenv() # Load environment variables from .env file
 USERNAME = os.environ.get("AD_USERNAME")
 PASSWORD = os.environ.get("AD_PASSWORD")
-AD_URL = os.environ.get("AD_URL", "https://www.04uk.com/your_ad_page") #Default value
-REUPLOAD_BUTTON_XPATH = "//button[contains(text(), 'Reupload')]"  # Example
 
-if not USERNAME or not PASSWORD:
+if not USERNAME or not PASSWORD:# check if password and username are set
     raise ValueError("AD_USERNAME and AD_PASSWORD environment variables must be set.")
 
 def get_most_recent_ad_link(driver, partial_title):
     """Finds and returns the URL of the most recent ad (first row in table) using XPath."""
     try:
         # 1. Wait for the table
-        table_locator = (By.XPATH, "//table")  # Or a more specific locator
+        table_locator = (By.XPATH, "//table")  # find the first table in the webpage
         table_element = WebDriverWait(driver, 30).until(
             EC.presence_of_element_located(table_locator)
         )
@@ -35,18 +33,24 @@ def get_most_recent_ad_link(driver, partial_title):
             print("Table found.")
 
         # 2. Find the *first* row in the table using XPath
-        first_row = table_element.find_element(By.CSS_SELECTOR, "tr:first-child")
+        # first_row_locator = (By.XPATH, "//table/tbody/tr[1]")  # Or a more specific locator
+        #  #fboardlist > div > table > tbody > tr:nth-child(1)
+        first_row_locator = (By.CSS_SELECTOR, "tr:first-child")
+
+        first_row = WebDriverWait(table_element, 10).until(  # Note: Use table_element, not driver
+        EC.presence_of_element_located(first_row_locator))
         if first_row:
             print("First row found.")
 
         # 3. Find the link within that row using XPath
+        
         title_link_locator = (By.XPATH, "//div[@class='tbl_head01 tbl_wrap']/table/tbody/tr[1]//td[@class='td_subject']/div[@class='bo_tit']/a")
         title_link = WebDriverWait(driver, 30).until(
             EC.presence_of_element_located(title_link_locator)
         )
         if title_link:
             print("title link found")
-            print(title_link)
+            print(title_link.text)
 
         # 4. Check if the link's text contains the partial title
         if partial_title in title_link.text:
@@ -74,22 +78,24 @@ def click_reupload_button(driver):
         
         reupload_button_locator = (By.XPATH, "//a[contains(normalize-space(.), '다시올리기')]")
 
-        WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located(reupload_button_locator)
-        ).click()  # Find and click in one line!
+        button = WebDriverWait(driver, 30).until(
+            EC.element_to_be_clickable(reupload_button_locator) # used clikable instead of presence_of_element_located since it can waint tuill the button is clickable
+        )  
+        print("Re-upload button found.")
 
+        button.click()
         print("Clicked the 'Re-upload' button.")
-        print("Waiting for the alert...")
-        time.sleep(1)
-        try:
-            alert = driver.switch_to.alert()  # Switch to the alert
-            print(f"Alert text: {alert.text}")  # Good for debugging
-            alert.accept()  # Click "OK"
 
+        print("Waiting for the alert...")
+        alert = webdriver(driver, 10).until(EC.alert_is_present())  # Wait for the alert
+        if alert:
+            alert = driver.switch_to.alert  # Switch to the alert
+            print(f"Alert text: {alert.text}")  # Good for debugging
+            alert.accept()  # Click "OK" 확인 버튼
             print("Accepted the alert.")
             return True
-        except NoAlertPresentException:
-            print("No alert was present.") # Handle no alert.
+        else:
+            print("No alert was present.")
             return False
 
     except TimeoutException:
@@ -127,15 +133,16 @@ def reupload_ad():
         if not ad_url:
             print("Ad not found or does not match the partial title.")
             return
-        else:
-            print(f"Most recent ad URL: {ad_url}")
-            driver.get(ad_url)
-            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.TAG_NAME, "body"))) #waites untlle pages if fully loaded
-            print("Successfully navigated to the ad page.")
+        
+        print(f"Most recent ad URL: {ad_url}")
+        driver.get(ad_url)
+        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.TAG_NAME, "body"))) #waites untlle pages if fully loaded
+        print("Successfully navigated to the ad page.")
 
-            click_reupload_button(driver)
-            print("Re-upload process completed.")
+        if not click_reupload_button(driver):
+            print("Re-upload button not found or failed.")
             return
+        print("Re-upload process completed successfully.")
 
 
     except NoSuchElementException:
