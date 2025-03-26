@@ -37,7 +37,7 @@ def get_most_recent_ad_link(driver, partial_title):
         # 2. Find the *first* row in the table using XPath
         # first_row_locator = (By.XPATH, "//table/tbody/tr[1]")  # Or a more specific locator
         #  #fboardlist > div > table > tbody > tr:nth-child(1)
-        first_row_locator = (By.CSS_SELECTOR, "tr:first-child")
+        first_row_locator = (By.CSS_SELECTOR, "tr:first-child") # find the first row in the table using convention 
 
         first_row = WebDriverWait(table_element, 10).until(  # Note: Use table_element, not driver
         EC.presence_of_element_located(first_row_locator))
@@ -73,7 +73,7 @@ def get_most_recent_ad_link(driver, partial_title):
         print(f"An unexpected error occurred: {e}")
         return None
     
-def click_reupload_button(driver):
+def click_reupload_button(driver):#done!!
 
     """handel clikign the reupload button"""
     try:
@@ -88,8 +88,6 @@ def click_reupload_button(driver):
 
         button.click()
         print("Clicked the 'Re-upload' button.")
-
-
         
     except TimeoutException:
         print("Timed out waiting for the re-upload button.")
@@ -105,7 +103,10 @@ def click_reupload_button(driver):
     """Handle the alert that appears after clicking the button."""
     try:    
         print("Waiting for the alert...")
-        webdriver(driver, 10).until(EC.alert_is_present())  # Wait for the alert
+        time.sleep(4)
+        # webdriver(driver, 10).until(EC.alert_is_present())  # Wait for the alert
+        
+        print("Alert appeared.")
         alert = driver.switch_to.alert  # Switch to the alert
         print(f"Alert text: {alert.text}")  
         alert.accept()  # Click "OK" 확인 버튼
