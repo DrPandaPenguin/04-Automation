@@ -18,19 +18,23 @@ def get_most_recent_ad_link(driver, partial_title):
 
     try:
         # 1. Wait for the table
-        table_locator = (By.XPATH, "//table")  # find the first table in the webpage
+        # time.sleep(10000)
+        
+        table_locator = (By.CSS_SELECTOR, "#fboardlist > div")  # find the first table in the webpage
         table_element = WebDriverWait(driver, 30).until(
             EC.presence_of_element_located(table_locator)
         )
+
         logger.debug("Table found.")
+        # time.sleep(100000)
 
         # 2. Find the *first* row in the table using XPath
         # first_row_locator = (By.XPATH, "//table/tbody/tr[1]")  # Or a more specific locator
         #  #fboardlist > div > table > tbody > tr:nth-child(1)
-        first_row_locator = (By.CSS_SELECTOR, "tr:first-child") # find the first row in the table using convention 
+        first_row_locator = (By.CSS_SELECTOR, "tbody > tr:first-child") # find the first row in the table using convention 
 
-        first_row = WebDriverWait(table_element, 10).until(  # Note: Use table_element, not driver
-        EC.presence_of_element_located(first_row_locator))
+        first_row = WebDriverWait(table_element, 30).until(  # Note: Use table_element, not driver
+        EC.element_to_be_clickable(first_row_locator))
 
         logger.debug("First row found.")
 
@@ -76,10 +80,10 @@ def click_reupload_button(driver):#done!!
         "unexpected_error_clicking": If any other exception occurred during click.
     """
     try:
-        button = WebDriverWait(driver, 30).until(
+        button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.XPATH, "//a[contains(normalize-space(.), '다시올리기')]"))
         )
-        logger.info("Re-upload button found.")
+        logger.debug("Re-upload button found.")
         button.click()
         return "button_clicked_success"
 
@@ -106,10 +110,10 @@ def handle_alert(driver):
         "unexpected_error_alert": If any other exception occurred during alert handling.
     """
     try:
-        logger.info("Waiting for the alert...")
+        logger.debug("Waiting for the alert...")
         # Use WebDriverWait to wait for the alert, remove time.sleep()
         alert = WebDriverWait(driver, 10).until(EC.alert_is_present())
-        logger.info(f"Alert appeared. Text: {alert.text}")
+        logger.debug(f"Alert appeared. Text: {alert.text}")
         alert.accept()  # Click "OK"
         logger.info("Accepted the alert.")
         return "alert_accepted"

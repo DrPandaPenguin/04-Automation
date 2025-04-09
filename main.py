@@ -22,7 +22,7 @@ import logging # 1. Import the logging module
 log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 # You can change level to logging.DEBUG for more verbose output during development
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format=log_format,
     # filename='reupload_bot.log', # Uncomment to log to a file
     # filemode='a'                # 'a' = append, 'w' = overwrite
@@ -51,10 +51,10 @@ PARTIAL_TITLE = os.environ.get("AD_PARTIAL_TITLE")
 
 def setup_driver(): #done!!
     """Sets up the Chrome WebDriver with options."""
-    logger.info("Setting up Chrome WebDriver...")
+    logger.debug("Setting up Chrome WebDriver...")
     service = ChromeService(executable_path=ChromeDriverManager().install())# does this mean we down loead evrey time? 
     driver = webdriver.Chrome(service=service)
-    logger.info("Chrome WebDriver setup complete.")
+    logger.debug("Chrome WebDriver setup complete.")
     return driver
 
 def reupload_ad():
@@ -64,7 +64,7 @@ def reupload_ad():
         
         driver = setup_driver()
         # -- login to the website --
-        logger.info("Logging in to the website...")
+        logger.debug("Logging in to the website...")
         login_status = login_to_04uk(driver,USERNAME,PASSWORD)  # Log in to the website
         logger.info(f"Login status: {login_status}")
         if login_status != "login_success":
@@ -74,7 +74,7 @@ def reupload_ad():
 
         """Find the most recent ad and navigate to its page"""
         # logger.info("Finding the most recent ad...")
-        logger.info("Finding the most recent ad...")
+        logger.debug("Finding the most recent ad...")
         ad_url = get_most_recent_ad_link(driver, PARTIAL_TITLE)  # Example
         if not ad_url:
             logger.error("No ad found with the specified title.")
@@ -84,21 +84,33 @@ def reupload_ad():
         logger.info(f"Most recent ad URL: {ad_url}")
         driver.get(ad_url)
         WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.TAG_NAME, "body"))) #waites untlle pages if fully loaded
-        logger.info("Successfully navigated to the ad page.")
-
-        click_reupload_button(driver)  # Click the re-upload button
-        result = handle_alert(driver)  # Handle the alert if it appears
-
-        # Handle the result of the button click
-        if result == "button_clicked":
-            logger.info("Re-upload process completed successfully!")
-        elif result == "button_not_found":
-            logger.info("Re-upload button not found.")
-        elif result == "alert_not_found":
-            logger.info("Re-upload button clicked, but no alert appeared.")
-        elif result == "unexpected_error":
-            logger.info("An unexpected error occurred during re-upload.")
+        logger.debug("Successfully navigated to the ad page.")
         
+        # -- Click the re-upload button --
+        logger.debug("Clicking the re-upload button...")
+
+        click_status = click_reupload_button(driver) # Renamed for clarity
+
+        # --- Handle Alert (ONLY if button click succeeded) ---
+        if click_status == "button_clicked_success":
+            logger.info("Button clicked successfully, now handling alert...")
+            alert_status = handle_alert(driver) # Call separate alert handler
+
+            # Now evaluate the outcome based on alert handling
+            if alert_status == "alert_accepted":
+                logger.info("Re-upload process completed successfully!")
+            elif alert_status == "alert_not_found":
+                logger.warning("Re-upload Warning: Button clicked, but confirmation alert did not appear.")
+            else: # Handles "unexpected_error_alert"
+                logger.error(f"Re-upload Error: An error occurred while handling the alert: {alert_status}")
+
+        elif click_status == "button_not_found":
+            logger.error("Re-upload Failed: Re-upload button not found on the page.")
+
+        else: # Handles "unexpected_error_clicking"
+            logger.error(f"Re-upload Failed: An unexpected error occurred while clicking the button: {click_status}")
+
+
     except Exception as e:
         logger.error(f"An unexpected error occurred during the task: {e}")
     finally:
