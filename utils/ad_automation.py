@@ -12,45 +12,54 @@ import logging
 
 
 logger  = logging.getLogger(__name__)
+CSS_TABLE = "#fboardlist > div" # CSS selector for the table
+CSS_FIRST_ROW = "tbody > tr:first-child" # CSS selector for the first row in the table
+CSS_TITLE_LINK = "td.td_subject div.bo_tit a"
+XPATH_BUTTON = "//a[contains(normalize-space(.), '다시올리기')]"
+URL_MYARTICLE = "http://04uk.com/bbs/myarticles.php"
 
 
 def get_most_recent_ad_link(driver, partial_title):
+    """_summary_
+
+    Args:
+        driver (_type_): webdriver instance
+        partial_title (_type_): partial title to search for in the first row of the table
+    Returns:
+        link of_Url :  if found
+        None: if not found
+    """
 
     try:
-        # 1. Wait for the table
-        # time.sleep(10000)
-        
-        table_locator = (By.CSS_SELECTOR, "#fboardlist > div")  # find the first table in the webpage
+        # 1. Find the table using CSS selector
+        table_locator = (By.CSS_SELECTOR, CSS_TABLE)  # find the first table in the webpage
         table_element = WebDriverWait(driver, 30).until(
             EC.presence_of_element_located(table_locator)
         )
 
         logger.debug("Table found.")
-        # time.sleep(100000)
 
-        # 2. Find the *first* row in the table using XPath
-        # first_row_locator = (By.XPATH, "//table/tbody/tr[1]")  # Or a more specific locator
-        #  #fboardlist > div > table > tbody > tr:nth-child(1)
-        first_row_locator = (By.CSS_SELECTOR, "tbody > tr:first-child") # find the first row in the table using convention 
 
+        # 2. Find the first row in the table using CSS selector
+        first_row_locator = (By.CSS_SELECTOR, CSS_FIRST_ROW) # find the first row in the table using convention 
         first_row = WebDriverWait(table_element, 30).until(  # Note: Use table_element, not driver
         EC.element_to_be_clickable(first_row_locator))
 
         logger.debug("First row found.")
 
-        # 3. Find the link within that row using XPath
+            # 3. Find the link within that row using XPath
+        title_link_locator = (By.CSS_SELECTOR, CSS_TITLE_LINK)
         
-        title_link_locator = (By.CSS_SELECTOR, "td.td_subject div.bo_tit a")
-        title_link = WebDriverWait(first_row, 10).until( # Use first_row here!
+        
+        title_link =    WebDriverWait(first_row, 10).until( # Use first_row here!
             EC.presence_of_element_located(title_link_locator)
         )
+        logger.info(f"Title link found {title_link.text}"  )
 
-        logger.info(f"Title link found {title_link.text}")
-
-        # 4. Check if the link's text contains the partial title
-        if partial_title in title_link.text:
-             # 5. Get the href attribute (the URL)
-            link_url = title_link.get_attribute("href")
+        
+        if partial_title in title_link.text:# 4. Check if the link's text contains the partial title
+            
+            link_url = title_link.get_attribute("href") # 5. Get the href attribute (the URL)
             return link_url
         else:
             logger.error(f"First row does not contain title '{partial_title}'")
@@ -68,7 +77,6 @@ def get_most_recent_ad_link(driver, partial_title):
     
 def click_reupload_button(driver):#done!!
 
-
     """Finds and clicks the '다시 올리기' (Re-upload) button.
 
     Args:
@@ -81,7 +89,7 @@ def click_reupload_button(driver):#done!!
     """
     try:
         button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//a[contains(normalize-space(.), '다시올리기')]"))
+            EC.element_to_be_clickable((By.XPATH, XPATH_BUTTON))
         )
         logger.debug("Re-upload button found.")
         button.click()
@@ -91,7 +99,6 @@ def click_reupload_button(driver):#done!!
         logger.error("Timed out waiting for the re-upload button to be clickable.")
         return "button_not_found"
     except NoSuchElementException:
-        # Less likely with WebDriverWait, but good to handle
         logger.error("Re-upload button element could not be found in DOM.")
         return "button_not_found"
     except Exception as e:
@@ -111,7 +118,6 @@ def handle_alert(driver):
     """
     try:
         logger.debug("Waiting for the alert...")
-        # Use WebDriverWait to wait for the alert, remove time.sleep()
         alert = WebDriverWait(driver, 10).until(EC.alert_is_present())
         logger.debug(f"Alert appeared. Text: {alert.text}")
         alert.accept()  # Click "OK"
@@ -129,7 +135,7 @@ def login_to_04uk(driver,username, password):
         try:
                 # 1. Go to the login page
             
-            driver.get("http://04uk.com/bbs/myarticles.php")  # go to my article page 
+            driver.get(URL_MYARTICLE)  # go to my article page 
 
             """Login to the website"""
             username_field = WebDriverWait(driver, 10).until(
