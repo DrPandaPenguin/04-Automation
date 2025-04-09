@@ -8,20 +8,21 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, NoAlertPresentException
  # Import Service
  # Import ChromeDriverManager
+import logging
 
 
-
+logger  = logging.getLogger(__name__)
 
 
 def get_most_recent_ad_link(driver, partial_title):
-    """Finds and returns the URL of the most recent ad (first row in table) using XPath."""
+
     try:
         # 1. Wait for the table
         table_locator = (By.XPATH, "//table")  # find the first table in the webpage
         table_element = WebDriverWait(driver, 30).until(
             EC.presence_of_element_located(table_locator)
         )
-        print("Table found.")
+        logger.debug("Table found.")
 
         # 2. Find the *first* row in the table using XPath
         # first_row_locator = (By.XPATH, "//table/tbody/tr[1]")  # Or a more specific locator
@@ -30,16 +31,17 @@ def get_most_recent_ad_link(driver, partial_title):
 
         first_row = WebDriverWait(table_element, 10).until(  # Note: Use table_element, not driver
         EC.presence_of_element_located(first_row_locator))
-        print("First row found.")
+
+        logger.debug("First row found.")
 
         # 3. Find the link within that row using XPath
         
         title_link_locator = (By.CSS_SELECTOR, "td.td_subject div.bo_tit a")
-        title_link = WebDriverWait(driver, 30).until(
+        title_link = WebDriverWait(first_row, 10).until( # Use first_row here!
             EC.presence_of_element_located(title_link_locator)
         )
-        print("Title link found")
-        print(title_link.text)
+
+        logger.info(f"Title link found {title_link.text}")
 
         # 4. Check if the link's text contains the partial title
         if partial_title in title_link.text:
@@ -47,17 +49,17 @@ def get_most_recent_ad_link(driver, partial_title):
             link_url = title_link.get_attribute("href")
             return link_url
         else:
-            print(f"First row does not contain title '{partial_title}'")
+            logger.error(f"First row does not contain title '{partial_title}'")
             return None
 
     except TimeoutException:
-        print("Timed out waiting for the table or row.")
+        logger.error("Timed out waiting for the table or row.")
         return None
     except NoSuchElementException:
-        print("Table, row, or link not found.")
+        logger.error("Table, row, or link not found.")
         return None
     except Exception as e:  # Catch any other exceptions
-        print(f"An unexpected error occurred: {e}")
+        logger.error(f"An unexpected error occurred: {e}")
         return None
     
 def click_reupload_button(driver):#done!!
@@ -77,20 +79,19 @@ def click_reupload_button(driver):#done!!
         button = WebDriverWait(driver, 30).until(
             EC.element_to_be_clickable((By.XPATH, "//a[contains(normalize-space(.), '다시올리기')]"))
         )
-        print("Re-upload button found.")
+        logger.info("Re-upload button found.")
         button.click()
-        print("Clicked the 'Re-upload' button.")
         return "button_clicked_success"
 
     except TimeoutException:
-        print("Timed out waiting for the re-upload button to be clickable.")
+        logger.error("Timed out waiting for the re-upload button to be clickable.")
         return "button_not_found"
     except NoSuchElementException:
         # Less likely with WebDriverWait, but good to handle
-        print("Re-upload button element could not be found in DOM.")
+        logger.error("Re-upload button element could not be found in DOM.")
         return "button_not_found"
     except Exception as e:
-        print(f"An unexpected error occurred while finding/clicking button: {e}")
+        logger.error(f"An unexpected error occurred while finding/clicking button: {e}")
         return "unexpected_error_clicking"
     
 def handle_alert(driver):
@@ -105,23 +106,22 @@ def handle_alert(driver):
         "unexpected_error_alert": If any other exception occurred during alert handling.
     """
     try:
-        print("Waiting for the alert...")
+        logger.info("Waiting for the alert...")
         # Use WebDriverWait to wait for the alert, remove time.sleep()
         alert = WebDriverWait(driver, 10).until(EC.alert_is_present())
-        print(f"Alert appeared. Text: {alert.text}")
+        logger.info(f"Alert appeared. Text: {alert.text}")
         alert.accept()  # Click "OK"
-        print("Accepted the alert.")
+        logger.info("Accepted the alert.")
         return "alert_accepted"
 
     except TimeoutException:
-        print("Timed out waiting for the alert to appear.")
+        logger.error("Timed out waiting for the alert to appear.")
         return "alert_not_found"
     except Exception as e:
-        print(f"An unexpected error occurred while handling alert: {e}")
+        logger.error(f"An unexpected error occurred while handling alert: {e}")
         return "unexpected_error_alert"
 
 def login_to_04uk(driver,username, password):
-        print(username, password)
         try:
                 # 1. Go to the login page
             
@@ -141,9 +141,13 @@ def login_to_04uk(driver,username, password):
 
             return "login_success" # return success value
         except TimeoutException:
-            print("Timed out waiting for the login fields.")
-            return "login_failed"   
-
+            return "login_timeout"
+        except NoSuchElementException:
+            return "login_element_not_found"
+        except Exception as e: 
+            logger.error(f"An unexpected error occurred during login: {e}")
+            return "login_unexpected_error"
+        # Add any additional error handling or logging as needed
         
 
 
