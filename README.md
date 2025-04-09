@@ -75,6 +75,18 @@ Sensitive information like your username and password should not be hardcoded. T
     AD_PARTIAL_TITLE="PART_OF_YOUR_AD_TITLE_TO_MATCH"
     ```
     **Important:** Ensure the `.env` file is listed in your `.gitignore` file to avoid accidentally committing your credentials to version control.
+    ## Configuration
+
+2.  **Edit the `.env` file:** Open the `.env` file with a text editor and replace the placeholder values with your actual information:
+    * `AD_USERNAME`: Your username for 04uk.com.
+    * `AD_PASSWORD`: Your password for 04uk.com.
+    * `AD_PARTIAL_TITLE`: A unique part of the title of the ad you want the script to find and re-upload.
+
+**Example `.env` file:**
+```dotenv
+AD_USERNAME="my_actual_user"
+AD_PASSWORD="my_real_password123"
+AD_PARTIAL_TITLE="GCSE, A-level"
 
 ## Usage
 
